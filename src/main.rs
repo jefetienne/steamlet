@@ -70,7 +70,7 @@ struct Steamlet {
 	command: SteamletCommand
 }
 
-static CONFIGNAME: &'static str = "steamletrc";
+static DATA_FILE_NAME: &'static str = "steamlet.json";
 
 fn run_steam_game(game_id: u32) {
 	println!("-------------------------------------------------");
@@ -81,21 +81,27 @@ fn run_steam_game(game_id: u32) {
 }
 
 fn get_alias_data() -> (File, HashMap<String, u32>) {
-	// Get config directory
-	let config_dir: PathBuf = dirs::config_dir().unwrap().join(CONFIGNAME);
+	// Get local data directory
+	let data_dir: PathBuf = dirs::data_local_dir().unwrap().join("steamlet");
 	let data: HashMap<String, u32>;
 	let file: File;
 
-	// Create a new file if the config directory does not exist
-	if !config_dir.exists() {
-		println!("Creating config file..");
-		file = File::create(config_dir.as_path()).unwrap();
+	// Create a new file if the local data directory does not exist
+	if !data_dir.exists() {
+		std::fs::create_dir_all(data_dir.as_path()).unwrap();
+
+		file = OpenOptions::new()
+			.write(true)
+			.create_new(true)
+			.open(data_dir.join(DATA_FILE_NAME).as_path())
+			.unwrap();
+
 		data = HashMap::new();
 	} else {
 		file = OpenOptions::new()
 			.read(true)
 			.write(true)
-			.open(config_dir.as_path())
+			.open(data_dir.join(DATA_FILE_NAME).as_path())
 			.unwrap();
 
 		let buf_reader = BufReader::new(&file);
@@ -103,13 +109,13 @@ fn get_alias_data() -> (File, HashMap<String, u32>) {
 		data = serde_json::from_reader(buf_reader)
 			.unwrap_or(HashMap::new());
 
-		//println!("Found config file '{}'", config_dir.to_str().unwrap());
+		//println!("Found data file '{}'", data_dir.to_str().unwrap());
 	}
 
 	(file, data)
 }
 
-fn write_to_config_file(file: File, data: HashMap<String, u32>, message: String) {
+fn write_to_data_file(file: File, data: HashMap<String, u32>, message: String) {
 	// Create BufWriter for the file
 	let mut buf_writer = BufWriter::new(&file);
 
@@ -125,7 +131,7 @@ fn write_to_config_file(file: File, data: HashMap<String, u32>, message: String)
 			//buf_writer.flush().unwrap();
 		},
 		Err(_) => {
-			println!("Error while writing to {}", CONFIGNAME);
+			println!("Error while writing to {}", DATA_FILE_NAME);
 		}
 	}
 }
@@ -170,7 +176,7 @@ fn main() {
 
 			let message = format!("Alias '{}' successfully set to {}; total aliases = {}", alias.to_lowercase(), id, data.len());
 
-			write_to_config_file(file, data, message);
+			write_to_data_file(file, data, message);
 		},
 		SteamletCommand::Remove { mut aliases } => {
 			// Get the file and parsed data
@@ -211,7 +217,7 @@ fn main() {
 
 				let message = format!("Aliases '{}' successfully removed; total aliases = {}", list, data.len());
 
-				write_to_config_file(file, data, message);
+				write_to_data_file(file, data, message);
 			} else {
 				println!("Nothing to be removed; total aliases = {}", data.len());
 			}
@@ -222,6 +228,8 @@ fn main() {
 			let data: HashMap<String, u32> = tuple.1;
 			let tab_size = 4.0;
 			let num_tabs: usize = 4;
+
+			println!("Path: {}\n", dirs::data_local_dir().unwrap().join("steamlet").join(DATA_FILE_NAME).to_str().unwrap());
 
 			// Sort results alphabetically
 			let mut sorted: Vec<_> = data.into_iter().collect();
