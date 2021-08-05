@@ -214,11 +214,11 @@ fn main() {
 				let mut list: String = String::new();
 				let mut first = true;
 
-				for item in aliases.iter() {
+				for item in aliases {
 					if !first {
 						list += ", ";
 					}
-					list += item;
+					list += &item;
 					first = false;
 				}
 
