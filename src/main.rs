@@ -64,6 +64,9 @@ enum SteamletCommand {
 
 	Remove alias(es):
 		steamlet remove ets2 "euro truck simulator 2" [...]
+
+	List saved aliases:
+		steamlet list
 "#
 )]
 struct Steamlet {
