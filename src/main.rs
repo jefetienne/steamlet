@@ -172,11 +172,17 @@ fn main() {
 			let mut data: HashMap<String, u32> = tuple.1;
 
 			// Create/update the alias with the associated steam_id
-			data.insert(alias.to_lowercase(), id);
+			let formatted: String = alias.trim().to_lowercase();
 
-			let message = format!("Alias '{}' successfully set to {}; total aliases = {}", alias.to_lowercase(), id, data.len());
+			if formatted.len() > 0 {
+				data.insert(formatted.to_string(), id);
 
-			write_to_data_file(file, data, message);
+				let message = format!("Alias '{}' successfully set to {}; total aliases = {}", &formatted, id, data.len());
+
+				write_to_data_file(file, data, message);
+			} else {
+				println!("Alias must not be empty");
+			}
 		},
 		SteamletCommand::Remove { mut aliases } => {
 			// Get the file and parsed data
