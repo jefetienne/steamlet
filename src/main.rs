@@ -22,7 +22,7 @@ enum SteamletCommand {
 		game_str: String,
 	},
 
-	/// Adds or sets an alias to an associated Steam game ID
+	/// Adds or sets an alias to an associated Steam game ID (alt. command 'add')
 	#[structopt(alias = "add")]
 	Set {
 		/// The alias to be made
@@ -33,7 +33,8 @@ enum SteamletCommand {
 		id: u32
 	},
 
-	/// Removes an alias
+	/// Removes an alias (alt. command 'rm')
+	#[structopt(alias = "rm")]
 	Remove {
 		/// List of one or more aliases to be removed
 		#[structopt(required = true, min_values = 1)]
