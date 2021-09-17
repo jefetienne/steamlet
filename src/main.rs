@@ -8,6 +8,8 @@ use std::io::prelude::*;
 use std::collections::HashMap;
 
 extern crate dirs;
+//https://github.com/seanmonstar/reqwest
+//https://crates.io/crates/curl
 
 #[derive(StructOpt, Debug)]
 enum SteamletCommand {
@@ -78,10 +80,51 @@ static DATA_FILE_NAME: &'static str = "steamlet.json";
 
 fn run_steam_game(game_id: u32) {
 	println!("-------------------------------------------------");
-	Command::new("steam")
-		.arg(format!("steam://run/{}", game_id))
+
+	// Search to see if the steam flatpak exists
+	let mut flatpak = Command::new("flatpak")
+		.arg("list")
+		.stdout(std::process::Stdio::piped())
 		.spawn()
-		.expect("'steam' command failed to start");
+		.expect("'flatpak' command failed to start");
+
+	let mut grep = Command::new("grep")
+		.arg("com.valvesoftware.Steam")
+		.stdin(std::process::Stdio::piped())
+		.stdout(std::process::Stdio::piped())
+		.spawn()
+		.expect("'grep' command failed to start");
+	
+	if let Some(ref mut stdout) = flatpak.stdout {
+		if let Some(ref mut stdin) = grep.stdin {
+			let mut buf: Vec<u8> = Vec::new();
+			stdout.read_to_end(&mut buf).unwrap();
+			stdin.write_all(&buf).unwrap();
+		}
+	}
+
+	let res = grep.wait_with_output().unwrap().stdout;
+
+	match String::from_utf8(res) {
+		Ok(v) => {
+			// If Steam flatpak exists, run that
+			if v.contains("Steam") {
+				Command::new("flatpak")
+					.arg("run")
+					.arg("com.valvesoftware.Steam")
+					.arg(format!("steam://run/{}", game_id))
+					.spawn()
+					.expect("'flatpak run com.valvesoftware.Steam' command failed to start");
+			} else {
+				// Otherwise, try to run the direct steam command
+				Command::new("steam")
+				.arg(format!("steam://run/{}", game_id))
+				.spawn()
+				.expect("'steam' command failed to start");
+			}
+		}
+		Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+	};
 }
 
 fn get_alias_data() -> (File, HashMap<String, u32>) {
@@ -260,3 +303,22 @@ fn main() {
 		},
 	}
 }
+
+
+/*
+#[cfg(test)]
+mod tests {
+	//https://github.com/TeXitoi/structopt/blob/master/examples/required_if.rs
+	use super::*;
+
+	#[test]
+	fn test_play_no_id_flag() {
+		let opt = Steamlet::from_iter_safe(&["play", "227300"]);
+		let err = opt.unwrap_err();
+		assert_eq!(err.kind, clap::ErrorKind::MissingRequiredArgument);
+	}
+}
+
+
+
+*/
